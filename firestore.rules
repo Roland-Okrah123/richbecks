@@ -1,0 +1,143 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function role() {
+      return request.auth.token.role;
+    }
+    function isOwner() {
+      return isSignedIn() && role() == 'owner';
+    }
+    function isOneOf(roles) {
+      return isSignedIn() && role() in roles;
+    }
+
+    // ---------- USERS ----------
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isOwner());
+      allow create, update, delete: if isOwner();
+    }
+
+    // ---------- SETTINGS ----------
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner();
+    }
+
+    // ---------- DASHBOARD STATS (Cloud Functions only) ----------
+    match /dashboard_stats/{docId} {
+      allow read: if isOneOf(['owner','manager','accountant']);
+      allow write: if false; // only Cloud Functions (Admin SDK bypasses rules)
+    }
+
+    // ---------- CATEGORIES / BRANCHES (reference data) ----------
+    match /categories/{id} {
+      allow read: if isSignedIn();
+      allow write: if isOneOf(['owner','manager']);
+    }
+    match /branches/{id} {
+      allow read: if isSignedIn();
+      allow write: if isOwner();
+    }
+
+    // ---------- FABRICS / INVENTORY ----------
+    function validFabric() {
+      return request.resource.data.name is string
+        && request.resource.data.selling_price_yard is number
+        && request.resource.data.purchase_price_yard is number
+        && request.resource.data.total_yards_purchased is number
+        && request.resource.data.remaining_yards is number
+        && request.resource.data.minimum_stock_level is number
+        && request.resource.data.selling_price_yard > 0
+        && request.resource.data.purchase_price_yard >= 0
+        && request.resource.data.total_yards_purchased >= 0
+        && request.resource.data.remaining_yards >= 0
+        && request.resource.data.minimum_stock_level >= 0
+        && (!('material_type' in request.resource.data) || request.resource.data.material_type is string)
+        && (!('color_number' in request.resource.data) || request.resource.data.color_number is string)
+        && (!('color' in request.resource.data) || request.resource.data.color is string);
+    }
+
+    match /fabrics/{fabricId} {
+      allow read: if isSignedIn();
+      allow create, update: if isOneOf(['owner','manager','store_keeper']) && validFabric();
+      allow delete: if isOwner();
+
+      match /stock_movements/{moveId} {
+        allow read: if isSignedIn();
+        allow write: if false; // only via Cloud Functions, for auditability
+      }
+    }
+
+    // ---------- SUPPLIERS ----------
+    match /suppliers/{supplierId} {
+      allow read: if isOneOf(['owner','manager','store_keeper','accountant']);
+      allow write: if isOneOf(['owner','manager','store_keeper']);
+    }
+
+    // ---------- CUSTOMERS ----------
+    match /customers/{customerId} {
+      allow read: if isSignedIn();
+      allow write: if isOneOf(['owner','manager','cashier']);
+    }
+
+    // ---------- SALES (writes go through Cloud Function only) ----------
+    match /sales/{saleId} {
+      allow read: if isSignedIn();
+      allow create, update: if false; // use createSale callable function
+      allow delete: if isOwner();
+
+      match /items/{itemId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+    }
+
+    // ---------- PURCHASES ----------
+    match /purchases/{purchaseId} {
+      allow read: if isOneOf(['owner','manager','store_keeper','accountant']);
+      allow create: if false; // use recordPurchase callable function
+      allow update, delete: if isOwner();
+
+      match /items/{itemId} {
+        allow read: if isOneOf(['owner','manager','store_keeper','accountant']);
+        allow write: if false;
+      }
+    }
+
+    // ---------- CREDIT MANAGEMENT ----------
+    match /credits/{creditId} {
+      allow read: if isOneOf(['owner','manager','cashier','accountant']);
+      allow write: if false; // managed by Cloud Functions (createSale / recordCreditPayment)
+
+      match /payments/{paymentId} {
+        allow read: if isOneOf(['owner','manager','cashier','accountant']);
+        allow write: if false;
+      }
+    }
+
+    // ---------- EXPENSES ----------
+    match /expenses/{expenseId} {
+      allow read: if isOneOf(['owner','accountant','manager']);
+      allow create: if isOneOf(['owner','accountant','manager']);
+      allow update, delete: if isOneOf(['owner','accountant']);
+    }
+
+    // ---------- RETURNS ----------
+    match /returns/{returnId} {
+      allow read: if isOneOf(['owner','manager','cashier']);
+      allow create: if false; // use processReturn callable function
+      allow update, delete: if isOwner();
+    }
+
+    // ---------- AUDIT LOGS ----------
+    match /audit_logs/{logId} {
+      allow read: if isOwner();
+      allow write: if false; // Cloud Functions only
+    }
+  }
+}

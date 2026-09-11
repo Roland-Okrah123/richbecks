@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner() {
+      return isSignedIn() && request.auth.token.role == 'owner';
+    }
+
+    // Company branding assets (logo, receipt images) — publicly viewable
+    // (needed on the unauthenticated login page), only the Owner can upload.
+    match /branding/{fileName} {
+      allow read: if true;
+      allow write: if isOwner()
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Fabric photos — viewable by any signed-in staff member, uploaded by
+    // roles that manage inventory.
+    match /fabrics/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
+                   && request.auth.token.role in ['owner', 'manager', 'store_keeper']
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Deny everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

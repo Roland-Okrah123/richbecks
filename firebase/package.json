@@ -1,0 +1,12 @@
+{
+  "name": "richbecks-seed",
+  "private": true,
+  "scripts": {
+    "seed": "node seed.js",
+    "seed:emulator": "node seed-emulator.js",
+    "emulators": "firebase emulators:start"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.1.0"
+  }
+}
