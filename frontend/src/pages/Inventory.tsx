@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   listFabrics,
@@ -11,11 +11,23 @@ import { Fabric } from '../types';
 import { Plus, X, Search, Pencil } from 'lucide-react';
 
 const fmt = (n: number) =>
-  `GH₵ ${n.toLocaleString(undefined, {
+  `GHâ‚µ ${n.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 
+const CORE_FABRIC_CATEGORIES = [
+  { id: 'ankara', name: 'Ankara' },
+  { id: 'lace', name: 'Lace' },
+  { id: 'kente', name: 'Kente' },
+  { id: 'cotton', name: 'Cotton' },
+  { id: 'silk', name: 'Silk' },
+  { id: 'satin', name: 'Satin' },
+  { id: 'chiffon', name: 'Chiffon' },
+  { id: 'velvet', name: 'Velvet' },
+  { id: 'brocade', name: 'Brocade' },
+  { id: 'damask', name: 'Damask' },
+];
 const emptyForm = {
   name: '',
   category_id: '',
@@ -75,8 +87,16 @@ export default function Inventory() {
     refresh();
 
     listCategories()
-      .then((r) => setCategories(r))
-      .catch(() => setCategories([]));
+      .then((r) => {
+        setCategories(
+          r && r.length > 0
+            ? r
+            : CORE_FABRIC_CATEGORIES
+        );
+      })
+      .catch(() => {
+        setCategories(CORE_FABRIC_CATEGORIES);
+      });
 
     listSuppliers()
       .then((r) => setSuppliers(r))
@@ -360,7 +380,7 @@ export default function Inventory() {
 
       {loading && (
         <p className="text-gray-400 text-sm">
-          Loading inventory…
+          Loading inventoryâ€¦
         </p>
       )}
 
@@ -381,15 +401,15 @@ export default function Inventory() {
                 <div className="text-xs text-gray-400">
                   {f.material_type ||
                     f.category_name ||
-                    '—'}{' '}
-                  · {f.color || 'No color'}{' '}
+                    'â€”'}{' '}
+                  Â· {f.color || 'No color'}{' '}
                   {f.color_number
-                    ? `· #${f.color_number}`
+                    ? `Â· #${f.color_number}`
                     : ''}
                 </div>
 
                 <div className="text-xs text-gray-400">
-                  {f.remaining_yards} yds ·{' '}
+                  {f.remaining_yards} yds Â·{' '}
                   {fmt(
                     f.selling_price_yard
                   )}
@@ -404,7 +424,7 @@ export default function Inventory() {
         {!loading &&
           filtered.length === 0 && (
             <p className="text-center text-gray-400 py-8 text-sm">
-              No fabrics yet — add your first one.
+              No fabrics yet â€” add your first one.
             </p>
           )}
       </div>
@@ -452,13 +472,13 @@ export default function Inventory() {
                 <td className="py-3 text-gray-500">
                   {f.material_type ||
                     f.category_name ||
-                    '—'}
+                    'â€”'}
                 </td>
 
                 <td className="py-3 text-gray-500">
-                  {f.color || '—'}
+                  {f.color || 'â€”'}
                   {f.color_number
-                    ? ` · #${f.color_number}`
+                    ? ` Â· #${f.color_number}`
                     : ''}
                 </td>
 
@@ -502,7 +522,7 @@ export default function Inventory() {
                     colSpan={8}
                     className="text-center text-gray-400 py-8"
                   >
-                    No fabrics yet — add your first one.
+                    No fabrics yet â€” add your first one.
                   </td>
                 </tr>
               )}
@@ -565,16 +585,7 @@ export default function Inventory() {
                 ]}
               />
 
-              <Field
-                label="Material type"
-                value={form.material_type}
-                onChange={(v) =>
-                  setForm({
-                    ...form,
-                    material_type: v,
-                  })
-                }
-              />
+              <Field label="Material type" value={form.material_type} onChange={(v) => setForm({ ...form, material_type: v })} />
 
               <Field
                 label="Color number / code"
@@ -750,7 +761,7 @@ export default function Inventory() {
               className="w-full mt-5 bg-gold hover:bg-gold-dark text-charcoal font-semibold rounded-lg py-3 sm:py-2.5 disabled:opacity-50 active:scale-95 transition-transform"
             >
               {saving
-                ? 'Saving…'
+                ? 'Savingâ€¦'
                 : editing
                 ? 'Save Changes'
                 : 'Add Fabric'}
@@ -819,3 +830,4 @@ function Field({
     </div>
   );
 }
+
