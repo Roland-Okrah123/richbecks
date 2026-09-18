@@ -254,51 +254,62 @@ export default function Inventory() {
      * immediately before sending them to Firestore.
      */
     const clean = {
-      ...form,
+  ...form,
 
-      name: String(form.name).trim(),
+  name: String(form.name).trim(),
 
-      material_type: String(
-        form.material_type || ''
-      ).trim(),
+  material_type: String(
+    form.material_type || ''
+  ).trim(),
 
-      color_number: String(
-        form.color_number || ''
-      ).trim(),
+  color_number: String(
+    form.color_number || ''
+  ).trim(),
 
-      color: String(
-        form.color || ''
-      ).trim(),
+  color: String(
+    form.color || ''
+  ).trim(),
 
-      design_pattern: String(
-        form.design_pattern || ''
-      ).trim(),
+  design_pattern: String(
+    form.design_pattern || ''
+  ).trim(),
 
-      width: String(
-        form.width || ''
-      ).trim(),
+  width: String(
+    form.width || ''
+  ).trim(),
 
-      storage_location: String(
-        form.storage_location || ''
-      ).trim(),
+  storage_location: String(
+    form.storage_location || ''
+  ).trim(),
 
-      notes: String(
-        form.notes || ''
-      ).trim(),
+  notes: String(
+    form.notes || ''
+  ).trim(),
 
-      purchase_price_yard: purchasePrice,
+  purchase_price_yard: purchasePrice,
 
-      selling_price_yard: sellingPrice,
+  selling_price_yard: sellingPrice,
 
-      minimum_stock_level: minimumStock,
+  minimum_stock_level: minimumStock,
 
-      ...(editing
-        ? {}
-        : {
-            total_yards_purchased: totalYards,
-          }),
-    };
+  total_yards_purchased: totalYards,
 
+  ...(editing
+    ? {
+        remaining_yards: Math.max(
+          0,
+          totalYards -
+            Math.max(
+              0,
+              Number(editing.total_yards_purchased || 0) -
+                Number(editing.remaining_yards || 0)
+            )
+        ),
+      }
+    : {
+        remaining_yards: totalYards,
+      }),
+};
     try {
       if (editing) {
         await updateFabric(
@@ -698,24 +709,18 @@ export default function Inventory() {
                 }
               />
 
-              {!editing && (
-                <Field
-                  label="Total yards purchased"
-                  type="number"
-                  value={
-                    form.total_yards_purchased
-                  }
-                  onChange={(v) =>
-                    setForm({
-                      ...form,
-                      total_yards_purchased:
-                        v === ''
-                          ? ''
-                          : Number(v),
-                    })
-                  }
-                />
-              )}
+              <Field
+  label={editing ? 'Total yards purchased' : 'Total yards purchased'}
+  type="number"
+  value={form.total_yards_purchased}
+  onChange={(v) =>
+    setForm({
+      ...form,
+      total_yards_purchased:
+        v === '' ? '' : Number(v),
+    })
+  }
+/>
 
               <Field
                 label="Minimum stock level"
